@@ -1,174 +1,171 @@
-import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import React, { useEffect, useState } from "react";
+import axios from "axios";
+import "./fakestore.css";
 
 function FakeStore() {
   const [products, setProducts] = useState([]);
   const [filtered, setFiltered] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("All");
 
+  // Fetch products and categories
   useEffect(() => {
-    axios.get('https://fakestoreapi.com/products')
-      .then(res => {
-        setProducts(res.data);
-        setFiltered(res.data);
-        setLoading(false);
-      });
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const productRes = await axios.get("https://fakestoreapi.com/products");
+        const categoryRes = await axios.get("https://fakestoreapi.com/products/categories");
 
-    axios.get('https://fakestoreapi.com/products/categories')
-      .then(res => setCategories(res.data));
+        setProducts(productRes.data);
+        setFiltered(productRes.data);
+        setCategories(categoryRes.data);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      }
+      setLoading(false);
+    };
+
+    fetchData();
   }, []);
 
-  const handleCategoryClick = (category) => {
-    setSelectedCategory(category);
-    filterProducts(search, category);
-  };
+  // Filter products
+  useEffect(() => {
+    let filteredProducts = products;
 
-  const handleSearchChange = (e) => {
-    const value = e.target.value;
-    setSearch(value);
-    filterProducts(value, selectedCategory);
-  };
-
-  const filterProducts = (searchText, category) => {
-    let temp = [...products];
-
-    if (category !== 'all') {
-      temp = temp.filter(p => p.category === category);
+    if (selectedCategory !== "All") {
+      filteredProducts = filteredProducts.filter(
+        (item) => item.category === selectedCategory
+      );
     }
 
-    if (searchText.trim()) {
-      temp = temp.filter(p => p.title.toLowerCase().includes(searchText.toLowerCase()));
+    if (searchTerm.trim() !== "") {
+      filteredProducts = filteredProducts.filter((item) =>
+        item.title.toLowerCase().includes(searchTerm.toLowerCase())
+      );
     }
 
-    setFiltered(temp);
-  };
+    setFiltered(filteredProducts);
+  }, [products, selectedCategory, searchTerm]);
 
   return (
-    <div>
-      {/* Navbar */}
-      <nav className="navbar navbar-expand-lg navbar-light bg-light px-4 py-3">
-        <a className="navbar-brand fw-bold" href="/">FakeStore</a>
-        <div className="collapse navbar-collapse justify-content-end">
-          <form className="d-flex align-items-center flex-wrap gap-2">
-            <input
-              className="form-control me-2"
-              type="search"
-              placeholder="Search products"
-              value={search}
-              onChange={handleSearchChange}
-              style={{ minWidth: '150px' }}
-            />
+    <div className="container mt-4">
+      {/* Navbar with hamburger */}
+      <div className="d-md-none mb-3">
+        <button
+          className="btn btn-outline-dark"
+          type="button"
+          data-bs-toggle="offcanvas"
+          data-bs-target="#offcanvasMenu"
+          aria-controls="offcanvasMenu"
+        >
+          ☰
+        </button>
+      </div>
+
+      {/* Sidebar for mobile view */}
+      <div
+        className="offcanvas offcanvas-start d-md-none"
+        tabIndex="-1"
+        id="offcanvasMenu"
+        aria-labelledby="offcanvasMenuLabel"
+        style={{ width: "50%" }}
+      >
+        <div className="offcanvas-header">
+          <h5 className="offcanvas-title" id="offcanvasMenuLabel">Filters</h5>
+          <button
+            type="button"
+            className="btn-close"
+            data-bs-dismiss="offcanvas"
+            aria-label="Close"
+          ></button>
+        </div>
+        <div className="offcanvas-body">
+          <input
+            type="text"
+            className="form-control mb-3"
+            placeholder="Search products..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+          <div className="btn-group flex-wrap">
             <button
-              className={`btn btn-sm ${selectedCategory === 'all' ? 'btn-primary' : 'btn-outline-primary'}`}
-              onClick={() => handleCategoryClick('all')}
-              type="button"
+              className="btn btn-outline-dark"
+              onClick={() => setSelectedCategory("All")}
             >
               All
             </button>
-            {categories.map(cat => (
+            {categories.map((cat) => (
               <button
                 key={cat}
-                className={`btn btn-sm ${selectedCategory === cat ? 'btn-primary' : 'btn-outline-primary'}`}
-                onClick={() => handleCategoryClick(cat)}
-                type="button"
+                className="btn btn-outline-dark"
+                onClick={() => setSelectedCategory(cat)}
               >
-                {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                {cat}
               </button>
             ))}
-          </form>
-        </div>
-      </nav>
-
-      {/* Product Grid */}
-      <div className="container mt-3">
-        {loading ? (
-          <div className="text-center my-5">Loading products...</div>
-        ) : (
-          <div className="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-4">
-            {filtered.map(product => (
-              <div className="col" key={product.id}>
-                <div className="card h-100 shadow-sm">
-                  <img
-                    src={product.image}
-                    className="card-img-top"
-                    alt={product.title}
-                    style={{ height: '200px', objectFit: 'contain' }}
-                  />
-                  <div className="card-body">
-                    <h5 className="card-title">
-                      {product.title.length > 25 ? product.title.slice(0, 25) + '...' : product.title}
-                    </h5>
-                    <p className="card-text">${product.price.toFixed(2)}</p>
-                  </div>
-                  <div className="card-footer text-center">
-                    <button
-                      className="btn btn-outline-primary btn-sm"
-                      onClick={() => setSelectedProduct(product)}
-                    >
-                      View Details
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
           </div>
-        )}
+        </div>
       </div>
 
-      {/* Product Detail Modal */}
-      {selectedProduct && (
-        <>
-          <div
-            className="modal fade show"
-            tabIndex="-1"
-            role="dialog"
-            style={{
-              display: 'block',
-              backgroundColor: 'rgba(0,0,0,0.5)',
-            }}
+      {/* Filters for desktop */}
+      <div className="d-none d-md-block mb-4">
+        <div className="row mb-3">
+          <div className="col-md-6">
+            <input
+              type="text"
+              className="form-control"
+              placeholder="Search products..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+        </div>
+        <div className="btn-group flex-wrap">
+          <button
+            className={`btn btn-outline-dark ${selectedCategory === "All" ? "active" : ""}`}
+            onClick={() => setSelectedCategory("All")}
           >
-            <div className="modal-dialog modal-lg" role="document">
-              <div className="modal-content">
-                <div className="modal-header">
-                  <h5 className="modal-title">{selectedProduct.title}</h5>
-                  <button
-                    type="button"
-                    className="btn-close"
-                    onClick={() => setSelectedProduct(null)}
-                  ></button>
-                </div>
-                <div className="modal-body d-flex flex-column flex-md-row align-items-center gap-4">
-                  <img
-                    src={selectedProduct.image}
-                    alt={selectedProduct.title}
-                    style={{ maxWidth: '200px', maxHeight: '250px', objectFit: 'contain' }}
-                  />
-                  <div>
-                    <p>{selectedProduct.description}</p>
-                    <p className="text-muted">Category: {selectedProduct.category}</p>
-                    <h5 className="text-primary">${selectedProduct.price.toFixed(2)}</h5>
-                  </div>
-                </div>
-                <div className="modal-footer">
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    onClick={() => setSelectedProduct(null)}
-                  >
-                    Close
-                  </button>
+            All
+          </button>
+          {categories.map((cat) => (
+            <button
+              key={cat}
+              className={`btn btn-outline-dark ${selectedCategory === cat ? "active" : ""}`}
+              onClick={() => setSelectedCategory(cat)}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Product Cards */}
+      <div className="row">
+        {loading ? (
+          <p>Loading products...</p>
+        ) : filtered.length === 0 ? (
+          <p>No products found.</p>
+        ) : (
+          filtered.map((item) => (
+            <div className="col-md-3 col-sm-6 mb-4" key={item.id}>
+              <div className="card h-100">
+                <img
+                  src={item.image}
+                  className="card-img-top"
+                  alt={item.title}
+                  style={{ height: "200px", objectFit: "contain" }}
+                />
+                <div className="card-body">
+                  <h6 className="card-title">{item.title}</h6>
+                  <p className="card-text">${item.price}</p>
                 </div>
               </div>
             </div>
-          </div>
-          {/* Backdrop */}
-          <div className="modal-backdrop fade show"></div>
-        </>
-      )}
+          ))
+        )}
+      </div>
     </div>
   );
 }
